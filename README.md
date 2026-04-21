@@ -1,6 +1,6 @@
 # AI/Data internship by UBA
 
-## week_1:
+<!-- ## week_1:
 
 - Getting started (installation, running Python)
 - Variables and data types
@@ -14,4 +14,4 @@
 - Error and exception handling
 - Modules and packages
 - File handling
-- Object-oriented programming (basics)
+- Object-oriented programming (basics) -->
