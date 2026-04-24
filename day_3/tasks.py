@@ -49,26 +49,35 @@ with open(filename, "r") as f:
     titles_country= dict() # title is key and country-list is value
     # found= dict() # title is key and country-list is value
     for data in rows:
-        if data["title"] not in titles_country:
-            titles_country[data["title"]] = [data["source_country"]]
-        elif data["source_country"] not in titles_country[data["title"]]:
-            titles_country.setdefault(data["title"], []).append(data["source_country"])
-            # print(data["title"], data["source_country"])
-            # if len(titles_country[data["title"]])>1:
-            #     print(titles_country[""])
-            #     found.setdefault(data["title"], []).append(data["source_country"])
-    # print(titles_country)
+        title = data["title"]
+        country = data["source_country"]
+        if title not in titles_country:
+            titles_country[title] = [country]
+        elif country not in titles_country[title]:
+            titles_country.setdefault(title, []).append(country)
+
     found = [ [k, v] for k, v in titles_country.items() if len(v) > 1 ]
     for f in found:
         print(">>", f[0])
         print(f"   Appeared in {len(f[1])} countries: {', '.join([pycountry.countries.get(alpha_2=c).name for c in f[1]])}")
     
-
+    
     print("\n# 4  Which news source published the most headlines across all 5 countries combined? \n ----------------------------------------------------------------------------------")
     source_country_count = dict() # source and count of headlines in each country.
     for data in rows:
-        if data["source_name"] not in source_country_count:
-            source_country_count[data["source_name"]] = {data["source_country"]: 1}
+        source = data["source_name"]
+        country = data["source_country"]
+        if country not in among_country_codes.keys():
+            continue
+        if source not in source_country_count:
+            source_country_count[source] = {}
+        if country not in source_country_count[source]:
+            source_country_count[source][country] = 1
         else:
-            source_country_count["source_name"] = source_country_count["source_name"].setdefault(data["source_country"]: 1)
-    print(source_country.items())
+            source_country_count[source][country] += 1
+    source_count_among_countries = [[k, sum(v.values())] for k, v in source_country_count.items()]
+    source_count_among_countries = sorted(source_count_among_countries, key=lambda s: s[1], reverse=True)
+    # print(source_count_among_countries)
+    # for s in source_count_among_countries:
+    s = source_count_among_countries[0]
+    print(f"<<{s[0]}>> source has the most headlines across 5 countries of {s[1]} headlines. ")
