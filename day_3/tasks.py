@@ -1,5 +1,7 @@
 import csv
+from datetime import datetime, timedelta
 from functools import reduce
+from time import strptime
 import pycountry
 
 filename="articles.csv"
@@ -7,7 +9,8 @@ with open(filename, "r") as f:
     articles = csv.DictReader(f)
     rows = list(articles)
 
-    print("\n# 1 Which country out of Nepal, India, USA, UK and Australia published the most headlines today? \n ---------------------------------------------------------------------------------------------- ")
+    print("\n# 1 Which country out of Nepal, India, USA, UK and Australia published the most headlines today?")
+    print("  ---------------------------------------------------------------------------------------------- ")
 
     articles_by_country = {}
     for row in rows:
@@ -31,20 +34,22 @@ with open(filename, "r") as f:
     # for c in sorted_articles_by_country:
     #     print(f"{among_country_codes[c[0]]} published {c[1]} headlines today.")
 
-    print("\n# 2 What is the average number of words in a headline title — per country? \n ------------------------------------------------------------------------ ")
+    print("\n# 2 What is the average number of words in a headline title — per country?")
+    print("  ------------------------------------------------------------------------")
     
     average_words_in_title_by_country = []
     for country, data in articles_by_country.items():
         total = 0
-        count = len(data)
+        more_than_6_hours_count = len(data)
         for article in data:
             total += len(article["title"].split())
-        average_words_in_title_by_country.append([country, total/count])
-        print(f"{pycountry.countries.get(alpha_2=country).name} ({country}) has an average of {total/count} words in their headline title.")
+        average_words_in_title_by_country.append([country, total/more_than_6_hours_count])
+        print(f"{pycountry.countries.get(alpha_2=country).name} ({country}) has an average of {total/more_than_6_hours_count} words in their headline title.")
 
     # print(average_words_in_title_by_country)
     
-    print("\n# 3  Are there any headlines that appeared in more than one country? If yes, which ones? \n -------------------------------------------------------------------------------------- ")
+    print("\n# 3  Are there any headlines that appeared in more than one country? If yes, which ones?")
+    print("  -------------------------------------------------------------------------------------- ")
     
     titles_country= dict() # title is key and country-list is value
     # found= dict() # title is key and country-list is value
@@ -62,7 +67,8 @@ with open(filename, "r") as f:
         print(f"   Appeared in {len(f[1])} countries: {', '.join([pycountry.countries.get(alpha_2=c).name for c in f[1]])}")
     
     
-    print("\n# 4  Which news source published the most headlines across all 5 countries combined? \n ----------------------------------------------------------------------------------")
+    print("\n# 4  Which news source published the most headlines across all 5 countries combined?")
+    print("  ----------------------------------------------------------------------------------")
     source_country_count = dict() # source and count of headlines in each country.
     for data in rows:
         source = data["source_name"]
@@ -81,3 +87,20 @@ with open(filename, "r") as f:
     # for s in source_count_among_countries:
     s = source_count_among_countries[0]
     print(f"<<{s[0]}>> source has the most headlines across 5 countries of {s[1]} headlines. ")
+    
+
+
+    print("\n# 5 What percentage of all headlines were published in the last 6 hours vs older than 6 hours?")
+    print("  -------------------------------------------------------------------------------------------")
+    
+    now = datetime.now()
+    totalDataCount=len(rows)
+    more_than_6_hours_count=0
+    for row in rows:
+        date_obj = datetime.strptime(row["published_at"], "%Y-%m-%dT%H:%M:%SZ")
+        time_difference = abs(date_obj - now)
+        if time_difference > timedelta(hours=6):
+            more_than_6_hours_count+=1
+    more_than_6_hours_percentage = more_than_6_hours_count/totalDataCount * 100
+    print(f"{100-more_than_6_hours_percentage}% of task was published in last 6 hours and")
+    print(f"{more_than_6_hours_percentage}% of task are older than 6 hours")
