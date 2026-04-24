@@ -1,0 +1,3 @@
+# create a .env file in this directory with:
+# get it from https://docs.gnews.io/
+GNEWS_API=YOUR_API_KEY_HERE
