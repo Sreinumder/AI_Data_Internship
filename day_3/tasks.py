@@ -134,3 +134,23 @@ with open(filename, "r") as f:
                 headlines_gt_6 += 1
                 writer.writerow(row)
         print(f"there are {headlines_gt_6} numbers of articles that have words_count greater than 6 and saved into {gt6_filename}")
+        
+
+    print("\n# 8  Which country had the longest headline on average — and which had the shortest?")
+    print("  ----------------------------------------------------------------------------------")
+    country_title = dict() # dictionary with country as keys and list of titles as value
+    for row in rows:
+        country = row["source_country"]
+        title = row["title"]
+        if country not in country_title:
+            country_title[country] = [title]
+        else:
+            country_title[country].append(title)
+    country_average_title_length =[[k, sum(map(lambda x: len(x), v))/len(v)] for k, v in country_title.items() ]
+    sorted_average_title_length = sorted(country_average_title_length, key=lambda x: x[1])
+    # print(sorted_average_title_length)
+    
+    longest = sorted_average_title_length[-1]
+    shortest = sorted_average_title_length[0]
+    print(f"{pycountry.countries.get(alpha_2=longest[0]).name} has the longest average title of {longest[1]}.")
+    print(f"{pycountry.countries.get(alpha_2=shortest[0]).name} has the shortest average title of {shortest[1]}.")
