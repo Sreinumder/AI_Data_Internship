@@ -1,7 +1,5 @@
 import csv
 from datetime import datetime, timedelta
-from functools import reduce
-from time import strptime
 import pycountry
 
 filename="articles.csv"
@@ -104,3 +102,35 @@ with open(filename, "r") as f:
     more_than_6_hours_percentage = more_than_6_hours_count/totalDataCount * 100
     print(f"{100-more_than_6_hours_percentage}% of task was published in last 6 hours and")
     print(f"{more_than_6_hours_percentage}% of task are older than 6 hours")
+    
+    print("\n# 6  If you run your script twice, does your database end up with duplicate rows? How did you prevent that?")
+    print("  ---------------------------------------------------------------------------------------------------------")
+    print("no, before adding new entries into the csv files.")
+    print("I collected the entire [ id ] column and")
+    print("checked if there are any data entry that has an id that already exist in the csv")
+    
+    print("\n# 7  Save only headlines with a title longer than 6 words to a CSV. How many passed that filter?" )
+    print("  ----------------------------------------------------------------------------------------------" )
+    news_csv_header = [
+        "id",
+        "title",
+        "description",
+        "content",
+        "image",
+        "lang",
+        "published_at",
+        "source_id",
+        "source_name",
+        "source_url",
+        "source_country"
+    ]
+    gt6_filename="more_than_6_words.csv"
+    headlines_gt_6 = 0
+    with open(gt6_filename, mode="w", newline="") as ff:
+        writer = csv.DictWriter(ff, fieldnames=news_csv_header)
+        writer.writeheader()
+        for row in rows:
+            if len(row["title"].split()) > 6:
+                headlines_gt_6 += 1
+                writer.writerow(row)
+        print(f"there are {headlines_gt_6} numbers of articles that have words_count greater than 6 and saved into {gt6_filename}")
