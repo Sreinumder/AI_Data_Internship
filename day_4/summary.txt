@@ -1,0 +1,4 @@
+Weather Summary Report
+=====================
+
+Days with temperature difference > 10°C:
