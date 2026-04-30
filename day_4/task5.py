@@ -3,7 +3,7 @@ Task 05 · The Full System [Hard — Capstone]
 
 Bring everything together — Weeks 1, 2, and 3 in one script
 
-Goal  
+Goal
 Build a complete automated data system — fetch, store, analyse, and export. No manual steps.
 
 Flow:
@@ -26,101 +26,79 @@ Bonus:
 import requests
 import mysql.connector
 import pandas as pd
-import os, time
+import os
+import time
 from dotenv import load_dotenv
 from datetime import datetime
 
 load_dotenv()
 
-url = "https://gnews.io/api/v4/search/"
-API_KEY = os.getenv("GNEWS_API")
+NEWS_API_ENDPOINT = "https://gnews.io/api/v4/search/"
+NEWS_API_KEY = os.getenv("GNEWS_API")
 
-COUNTRIES = {
-    "np" : "Nepal",
-    "in" : "India",
-    "us" : "USA"
+TARGET_COUNTRIES = {
+    "np": "Nepal",
+    "in": "India",
+    "us": "USA"
 }
 
-try:
-    conn = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-    )
-    cursor = conn.cursor()
-    print("Connected to MySQL database successfully!")
-except mysql.connector.Error as err:
-    print(f"Error connecting to MySQL: {err}")
-    exit(1)
-    
 
-cursor.execute("CREATE DATABASE IF NOT EXISTS news_db")
-cursor.execute("USE news_db")
-cursor.execute("DROP TABLE IF EXISTS articles") 
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS articles (
-    id VARCHAR(255) PRIMARY KEY,
-    title TEXT,
-    description TEXT,
-    content TEXT,
-    url TEXT,
-    lang VARCHAR(10),
-    source_name VARCHAR(255),
-    source_url TEXT,
-    country VARCHAR(10),
-    published_at DATETIME
-)
-""")
-
-def fetch_news():
+def fetch_news_articles():
+    """Fetch news articles from GNews API for multiple countries."""
     all_articles = []
-    for country_code in COUNTRIES.keys():
-        time.sleep(2)   
-        params = {
-            "q": "None",
+    for country_code in TARGET_COUNTRIES.keys():
+        time.sleep(2)
+        request_params = {
+            "q": "news",
             "country": country_code,
-            "apikey": API_KEY,
+            "apikey": NEWS_API_KEY,
             "max": 10
         }
         try:
-            response = requests.get(url, params=params)
-            response.raise_for_status()   
-            data = response.json()
+            api_response = requests.get(NEWS_API_ENDPOINT, params=request_params)
+            api_response.raise_for_status()
+            response_data = api_response.json()
 
-            for article in data.get("articles", []):
+            for article in response_data.get("articles", []):
                 all_articles.append((article, country_code))
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching news for {COUNTRIES[country_code]}: {e}")
-    
+        except requests.exceptions.RequestException as error:
+            print(f"Error fetching news for {TARGET_COUNTRIES[country_code]}: {error}")
+
     return all_articles
 
-def clean_article(article):
 
-    raw_date = article.get("publishedAt")
+def process_article(raw_article):
+    """Clean and process a raw article from the API."""
+    raw_date = raw_article.get("publishedAt")
     try:
-        published_at = datetime.strptime(raw_date, "%Y-%m-%dT%H:%M:%SZ") if raw_date else None
+        published_datetime = (
+            datetime.strptime(raw_date, "%Y-%m-%dT%H:%M:%SZ")
+            if raw_date else None
+        )
     except Exception:
-        published_at = None
+        published_datetime = None
+
     return {
-        "id": article.get("id"),
-        "title": article.get("title", "N/A"),
-        "description": article.get("description", "N/A"),
-        "content": article.get("content", "N/A"),
-        "url": article.get("url", "N/A"),
-        "lang": article.get("lang", "N/A"),
-        "source_name": article.get("source", {}).get("name", "N/A"),
-        "source_url": article.get("source", {}).get("url", "N/A"),
-        "published_at": published_at
+        "id": raw_article.get("id"),
+        "title": raw_article.get("title", "N/A"),
+        "description": raw_article.get("description", "N/A"),
+        "content": raw_article.get("content", "N/A"),
+        "url": raw_article.get("url", "N/A"),
+        "lang": raw_article.get("lang", "N/A"),
+        "source_name": raw_article.get("source", {}).get("name", "N/A"),
+        "source_url": raw_article.get("source", {}).get("url", "N/A"),
+        "published_at": published_datetime
     }
 
-def store_news(articles):
+
+def store_articles(db_connection, db_cursor, articles):
+    """Store processed articles in the database."""
     for raw_article, country_code in articles:
-        article = clean_article(raw_article)    
+        processed_article = process_article(raw_article)
 
         try:
-            cursor.execute("""
-            INSERT INTO articles 
+            db_cursor.execute("""
+            INSERT INTO articles
             (id, title, description, content, url, lang, source_name, source_url, country, published_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
@@ -134,39 +112,72 @@ def store_news(articles):
                 country = VALUES(country),
                 published_at = VALUES(published_at)
             """, (
-                article["id"],                
-                article["title"],
-                article["description"],
-                article["content"],
-                article["url"],
-                article["lang"],
-                article["source_name"],        
-                article["source_url"],         
+                processed_article["id"],
+                processed_article["title"],
+                processed_article["description"],
+                processed_article["content"],
+                processed_article["url"],
+                processed_article["lang"],
+                processed_article["source_name"],
+                processed_article["source_url"],
                 country_code,
-                article["published_at"]        
+                processed_article["published_at"]
             ))
+        except mysql.connector.Error as error:
+            print(f"Error inserting article {processed_article['id']}: {error}")
 
-        except mysql.connector.Error as err:
-            print(f"Error inserting article {article['id']}: {err}")
+    db_connection.commit()
 
-    conn.commit()
 
-def close_connection():
-    cursor.close()
-    conn.close()
-
-def export_to_csv():
+def export_data_to_csv(db_connection):
+    """Export all articles to CSV file."""
     try:
-        df = pd.read_sql("SELECT * FROM articles", conn) 
-        df.drop_duplicates(subset=["id"], inplace=True)  
-        df.to_csv("news.csv", index=False)
-        print("Data exported to news.csv successfully!")
-    except Exception as e:
-        print(f"Error exporting data to CSV: {e}")
+        dataframe = pd.read_sql("SELECT * FROM articles", db_connection)
+        dataframe.drop_duplicates(subset=["id"], inplace=True)
+        dataframe.to_csv("news_data.csv", index=False)
+        print("Data exported to news_data.csv successfully!")
+    except Exception as error:
+        print(f"Error exporting data to CSV: {error}")
+
+
+def run_news_system():
+    """Main function to run the complete news system."""
+    with mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+    ) as db_conn:
+        with db_conn.cursor() as db_cursor:
+            db_cursor.execute("CREATE DATABASE IF NOT EXISTS news_db")
+            db_cursor.execute("USE news_db")
+            db_cursor.execute("DROP TABLE IF EXISTS articles")
+
+            db_cursor.execute("""
+            CREATE TABLE IF NOT EXISTS articles (
+                id VARCHAR(255) PRIMARY KEY,
+                title TEXT,
+                description TEXT,
+                content TEXT,
+                url TEXT,
+                lang VARCHAR(10),
+                source_name VARCHAR(255),
+                source_url TEXT,
+                country VARCHAR(10),
+                published_at DATETIME
+            )
+            """)
+
+            print("Connected to MySQL database successfully!")
+
+            fetched_articles = fetch_news_articles()
+            if fetched_articles:
+                store_articles(db_conn, db_cursor, fetched_articles)
+                export_data_to_csv(db_conn)
+            else:
+                print("No articles were fetched. Skipping storage and export.")
+
+            print("Done: News fetched and stored successfully.")
+
 
 if __name__ == "__main__":
-    articles = fetch_news()
-    store_news(articles)
-    export_to_csv()
-    close_connection()
-    print("Done: News fetched and stored successfully.")
+    run_news_system()

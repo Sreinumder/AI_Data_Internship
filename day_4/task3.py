@@ -10,7 +10,7 @@ Use the Open-Meteo API to fetch 7-day weather for 3 cities and store + compare t
 5. Query 2: Find the single hottest day across all 3 cities
 6. Query 3: Find days where the temperature difference (max - min) is greater than 10°C
 7. Save a summary report to a summary.txt file using Python file handling (Week 1 skill!)
-Deliverable: weather.db + summary.txt + script showing all 3 query outputs  
+Deliverable: weather.db + summary.txt + script showing all 3 query outputs
 Bonus: add humidity data as a 4th column
 """
 import os
@@ -21,143 +21,149 @@ from collections import defaultdict
 
 load_dotenv()
 
-try:
-    conn = mysql.connector.connect(
+
+def run_weather_analysis():
+    """Main function to run the weather data analysis."""
+    with mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-    )
-    cursor = conn.cursor()
-    print("Connected to MySQL server successfully!")
-except mysql.connector.Error as err:
-    print(f"Error connecting to MySQL: {err}")
-    exit(1)
+    ) as db_conn:
+        with db_conn.cursor() as db_cursor:
+            db_cursor.execute("CREATE DATABASE IF NOT EXISTS weather_db")
+            db_cursor.execute("USE weather_db")
 
-cursor.execute("CREATE DATABASE IF NOT EXISTS weather_db")
-cursor.execute("USE weather_db")
+            db_cursor.execute("""
+            CREATE TABLE IF NOT EXISTS forecasts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                city VARCHAR(100),
+                date DATE,
+                max_temp FLOAT,
+                min_temp FLOAT,
+                humidity FLOAT,
+                UNIQUE KEY unique_city_date (city, date)
+            )
+            """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS forecasts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    city VARCHAR(100),
-    date DATE,
-    max_temp FLOAT,
-    min_temp FLOAT,
-    humidity FLOAT,
-    UNIQUE KEY unique_city_date (city, date)
-)
-""")
+            api_params = {
+                "daily": "temperature_2m_max,temperature_2m_min",
+                "hourly": "relative_humidity_2m",
+                "timezone": "auto",
+            }
 
-params = {
-    "daily": "temperature_2m_max,temperature_2m_min",
-    "hourly": "relative_humidity_2m",
-    "timezone": "auto",
-}
+            city_coordinates = {
+                "New York": {"latitude": 40.7128, "longitude": -74.0060},
+                "London": {"latitude": 51.5074, "longitude": -0.1278},
+                "Tokyo": {"latitude": 35.6762, "longitude": 139.6503}
+            }
 
-cities = {
-    "New York": {"latitude": 40.7128, "longitude": -74.0060},
-    "London": {"latitude": 51.5074, "longitude": -0.1278},
-    "Tokyo": {"latitude": 35.6762, "longitude": 139.6503}
-}
+            for city_name, coords in city_coordinates.items():
+                api_params["latitude"] = coords["latitude"]
+                api_params["longitude"] = coords["longitude"]
 
-for city, coords in cities.items():
+                api_response = requests.get(
+                    "https://api.open-meteo.com/v1/forecast",
+                    params=api_params
+                )
 
-    params["latitude"] = coords["latitude"]
-    params["longitude"] = coords["longitude"]
+                if api_response.status_code == 200:
+                    weather_data = api_response.json()
 
-    response = requests.get("https://gnews.io/api/v4/search", params=params)
+                    daily_data = weather_data.get("daily", {})
+                    hourly_data = weather_data.get("hourly", {})
 
-    if response.status_code == 200:
-        data = response.json()
+                    date_list = daily_data.get("time", [])
+                    max_temperatures = daily_data.get("temperature_2m_max", [])
+                    min_temperatures = daily_data.get("temperature_2m_min", [])
 
-        daily = data.get("daily", {})
-        hourly = data.get("hourly", {})
+                    hourly_times = hourly_data.get("time", [])
+                    hourly_humidity = hourly_data.get("relative_humidity_2m", [])
 
-        dates = daily.get("time", [])
-        max_temps = daily.get("temperature_2m_max", [])
-        min_temps = daily.get("temperature_2m_min", [])
+                    humidity_by_day = defaultdict(list)
 
-        hourly_times = hourly.get("time", [])
-        hourly_humidity = hourly.get("relative_humidity_2m", [])
+                    for time_val, humidity_val in zip(hourly_times, hourly_humidity):
+                        day = time_val.split("T")[0]
+                        humidity_by_day[day].append(humidity_val)
 
-        humidity_map = defaultdict(list) 
+                    daily_humidity = {
+                        day: sum(values) / len(values)
+                        for day, values in humidity_by_day.items()
+                    }
 
-        for t, h in zip(hourly_times, hourly_humidity):
-            day = t.split("T")[0] # Extract date part
-            humidity_map[day].append(h) # Group humidity values by date each day has a list of hourly humidity values
+                    for date_str, max_temp, min_temp in zip(
+                        date_list, max_temperatures, min_temperatures
+                    ):
+                        db_cursor.execute("""
+                            INSERT INTO forecasts (city, date, max_temp, min_temp, humidity)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE
+                                max_temp = VALUES(max_temp),
+                                min_temp = VALUES(min_temp),
+                                humidity = VALUES(humidity)
+                        """, (
+                            city_name,
+                            date_str,
+                            max_temp,
+                            min_temp,
+                            daily_humidity.get(date_str)
+                        ))
 
-        daily_humidity = {
-            day: sum(values) / len(values)
-            for day, values in humidity_map.items()
-        }
+                    db_conn.commit()
+                    print(f"{city_name} data inserted successfully!")
+                else:
+                    print(f"Failed to fetch data for {city_name}: {api_response.status_code}")
 
-        for date, max_temp, min_temp in zip(dates, max_temps, min_temps):
+            db_cursor.execute("""
+            SELECT city, AVG(max_temp) as avg_max
+            FROM forecasts
+            GROUP BY city
+            ORDER BY avg_max DESC
+            LIMIT 1
+            """)
+            warmest_city = db_cursor.fetchone()
 
-            cursor.execute("""
-                INSERT INTO forecasts (city, date, max_temp, min_temp, humidity)
-                VALUES (%s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    max_temp = VALUES(max_temp),
-                    min_temp = VALUES(min_temp),
-                    humidity = VALUES(humidity)
-            """, (
-                city,
-                date,
-                max_temp,
-                min_temp,
-                daily_humidity.get(date)
-            ))
+            db_cursor.execute("""
+            SELECT city, date, max_temp
+            FROM forecasts
+            ORDER BY max_temp DESC
+            LIMIT 1
+            """)
+            hottest_day = db_cursor.fetchone()
 
-        conn.commit()
-        print(f"{city} data inserted successfully!")
+            db_cursor.execute("""
+            SELECT city, date, max_temp, min_temp, humidity
+            FROM forecasts
+            WHERE (max_temp - min_temp) > 10
+            """)
+            high_variance_days = db_cursor.fetchall()
 
-    else:
-        print(f"Failed to fetch data for {city}: {response.status_code}")
+            with open("summary.txt", "w", encoding="utf-8") as report_file:
+                report_file.write("Weather Summary Report\n")
+                report_file.write("=====================\n\n")
 
+                if warmest_city:
+                    report_file.write(
+                        f"Hottest city on average: {warmest_city[0]} "
+                        f"with avg max temp {warmest_city[1]:.2f}°C\n\n"
+                    )
 
-cursor.execute("""
-SELECT city, AVG(max_temp) as avg_max
-FROM forecasts
-GROUP BY city
-ORDER BY avg_max DESC
-LIMIT 1
-""")
-hottest_city = cursor.fetchone()
+                if hottest_day:
+                    report_file.write(
+                        f"Hottest day: {hottest_day[0]} on {hottest_day[1]} "
+                        f"with {hottest_day[2]:.2f}°C\n\n"
+                    )
 
-cursor.execute("""
-SELECT city, date, max_temp
-FROM forecasts
-ORDER BY max_temp DESC
-LIMIT 1
-""")
-hottest_day = cursor.fetchone()
+                report_file.write("Days with temperature difference > 10°C:\n")
 
-cursor.execute("""
-SELECT city, date, max_temp, min_temp, humidity
-FROM forecasts
-WHERE (max_temp - min_temp) > 10
-""")
-hot_days = cursor.fetchall()
+                for city, date, max_t, min_t, hum in high_variance_days:
+                    temp_diff = max_t - min_t
+                    report_file.write(
+                        f"{city} on {date}: Max {max_t:.2f}°C, Min {min_t:.2f}°C, "
+                        f"Humidity {hum:.2f}% | Diff {temp_diff:.2f}°C\n"
+                    )
+
+            print("summary.txt created successfully!")
 
 
-with open("summary.txt", "w", encoding="utf-8") as f:
-
-    f.write("Weather Summary Report\n")
-    f.write("=====================\n\n")
-
-    if hottest_city:
-        f.write(f"Hottest city on average: {hottest_city[0]} with avg max temp {hottest_city[1]:.2f}°C\n\n")
-
-    if hottest_day:
-        f.write(f"Hottest day: {hottest_day[0]} on {hottest_day[1]} with {hottest_day[2]:.2f}°C\n\n")
-
-    f.write("Days with temperature difference > 10°C:\n")
-
-    for city, date, max_temp, min_temp, humidity in hot_days:
-        diff = max_temp - min_temp
-        f.write(f"{city} on {date}: Max {max_temp:.2f}°C, Min {min_temp:.2f}°C, Humidity {humidity:.2f}% | Diff {diff:.2f}°C\n")
-
-print("summary.txt created successfully!")
-
-cursor.close()
-conn.close()
+if __name__ == "__main__":
+    run_weather_analysis()

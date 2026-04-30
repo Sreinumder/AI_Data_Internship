@@ -32,123 +32,117 @@ import mysql.connector
 
 load_dotenv()
 
-try:
-    conn = mysql.connector.connect(
+
+def run_app_pipeline():
+    """Main function to run the API to MySQL pipeline."""
+    with mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        )
-    cursor = conn.cursor()
-except mysql.connector.Error as err:
-    print("MySQL connection error:", err)
-    exit(1)
-    
+    ) as db_conn:
+        with db_conn.cursor() as db_cursor:
+            db_cursor.execute("CREATE DATABASE IF NOT EXISTS app_db")
+            db_cursor.execute("USE app_db")
 
-cursor.execute("create database if not exists app_db")
-cursor.execute("use app_db")
+            db_cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY,
+                name VARCHAR(255),
+                email VARCHAR(255) UNIQUE,
+                phone VARCHAR(50) UNIQUE,
+                city VARCHAR(100),
+                company_name VARCHAR(255)
+            )
+            """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    id INT PRIMARY KEY,
-    name VARCHAR(255),
-    email VARCHAR(255) UNIQUE,
-    phone VARCHAR(50) UNIQUE, 
-    city VARCHAR(100),
-    company_name VARCHAR(255)
-)
-""")
+            db_cursor.execute("""
+            CREATE TABLE IF NOT EXISTS posts (
+                id INT PRIMARY KEY,
+                user_id INT,
+                title VARCHAR(255),
+                body TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )""")
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS posts (
-    id INT PRIMARY KEY,
-    user_id INT,
-    title VARCHAR(255),
-    body TEXT,
+            api_response = requests.get("https://jsonplaceholder.typicode.com/users")
+            if api_response.status_code == 200:
+                user_data = api_response.json()
+                for user in user_data:
+                    try:
+                        db_cursor.execute("""
+                        INSERT INTO users (id, name, email, phone, city, company_name)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE
+                                name = VALUES(name),
+                                email = VALUES(email),
+                                phone = VALUES(phone),
+                                city = VALUES(city),
+                                company_name = VALUES(company_name)
+                        """, (
+                            user.get("id"),
+                            user.get("name"),
+                            user.get("email"),
+                            user.get("phone"),
+                            user.get("address", {}).get("city"),
+                            user.get("company", {}).get("name")
+                        ))
+                    except Exception as error:
+                        print("User insert error:", error)
 
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)""")
+            db_conn.commit()
 
-response = requests.get("https://jsonplaceholder.typicode.com/users")
-if response.status_code == 200:
-    users = response.json()
-    for u in users:
-        try:
-            cursor.execute("""
-            INSERT INTO users (id, name, email, phone, city, company_name)
-            VALUES (%s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    name = VALUES(name),
-                    email = VALUES(email),
-                    phone = VALUES(phone),
-                    city = VALUES(city),
-                    company_name = VALUES(company_name)
-            """, (
-                u.get("id"),
-                u.get("name"),
-                u.get("email"),
-                u.get("phone"),
-                u.get("address", {}).get("city"),   # safer nested access
-                u.get("company", {}).get("name")    # safer nested access
-            ))
-        except Exception as e:
-            print("User insert error:", e)
+            posts_response = requests.get("https://jsonplaceholder.typicode.com/posts")
+            if posts_response.status_code == 200:
+                posts_data = posts_response.json()
+                for post in posts_data:
+                    if post["userId"] in [1, 2, 3]:
+                        try:
+                            db_cursor.execute("""
+                            INSERT INTO posts (id, user_id, title, body)
+                            VALUES (%s, %s, %s, %s)
+                                ON DUPLICATE KEY UPDATE
+                                    user_id = VALUES(user_id),
+                                    title = VALUES(title),
+                                    body = VALUES(body)
+                            """, (
+                                post.get("id"),
+                                post.get("userId"),
+                                post.get("title"),
+                                post.get("body")
+                            ))
+                        except Exception as error:
+                            print("Post insert error:", error)
 
-conn.commit() # commit after all inserts because of foreign key constraint as posts depend on users
+            db_conn.commit()
 
-response = requests.get("https://jsonplaceholder.typicode.com/posts")
-if response.status_code == 200:
-    posts = response.json()
-    for p in posts:
-        if p["userId"] in [1, 2, 3]: # only insert posts for user_id 1, 2, 3
-            try:
-                cursor.execute("""
-                INSERT INTO posts (id, user_id, title, body)
-                VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        user_id = VALUES(user_id),
-                        title = VALUES(title),
-                        body = VALUES(body)
-                """, (
-                    p.get("id"),
-                    p.get("userId"),
-                    p.get("title"),
-                    p.get("body")
-                ))
-            except Exception as e:
-                print("Post insert error:", e)
+            print("\n--- All Users (sorted by name) ---")
+            db_cursor.execute("select name, email, city from users order by name")
+            query_results = db_cursor.fetchall()
+            for name, email, city in query_results:
+                print(f"Name: {name}, Email: {email}, City: {city}")
 
-conn.commit()
+            print("\n--- Users from the same city ---")
+            db_cursor.execute("""
+            SELECT city, COUNT(*)
+            FROM users
+            GROUP BY city
+            HAVING COUNT(*) > 1
+            """)
+            query_results = db_cursor.fetchall()
+            for city, count in query_results:
+                print(f"City: {city}, Count: {count}")
 
-print("\n--- All Users (sorted by name) ---")
-cursor.execute("select name, email, city from users order by name")
-results = cursor.fetchall()
-for name, email, city in results:
-    print(f"Name: {name}, Email: {email}, City: {city}")
+            print("\n--- Users and their posts ---")
+            db_cursor.execute("""
+            SELECT users.name, posts.title
+            FROM users
+            JOIN posts ON users.id = posts.user_id
+            ORDER BY users.name
+            """)
+            query_results = db_cursor.fetchall()
+            for name, title in query_results:
+                print(f"User: {name}, Post Title: {title}")
 
-print("\n--- Users from the same city ---")
-cursor.execute("""
-SELECT city, COUNT(*) 
-FROM users
-GROUP BY city
-HAVING COUNT(*) > 1
-""")
-results = cursor.fetchall()
-for city, count in results:
-    print(f"City: {city}, Count: {count}")
-    
 
-print("\n--- Users and their posts ---")
-cursor.execute("""
-SELECT users.name, posts.title
-FROM users
-JOIN posts ON users.id = posts.user_id
-ORDER BY users.name
-""")
-results = cursor.fetchall()
-for name, title in results:
-    print(f"User: {name}, Post Title: {title}")
-
-    
-
-cursor.close()
-conn.close()
+if __name__ == "__main__":
+    run_app_pipeline()

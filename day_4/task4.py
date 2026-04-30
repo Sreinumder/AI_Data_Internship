@@ -22,116 +22,128 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-try:
-    conn = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD")
-    )
-    cursor = conn.cursor()
-    print("Connected to MySQL server successfully!")
-except mysql.connector.Error as err:
-    print(f"Error connecting to MySQL: {err}")
-    exit(1)
-    
 
-cursor.execute("CREATE DATABASE IF NOT EXISTS grades_db")
-cursor.execute("USE grades_db")
-
-cursor.execute("DROP TABLE IF EXISTS students") # Start with a clean slate each time
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS students (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    subject VARCHAR(100) NOT NULL,
-    score INT NOT NULL,
-    grade CHAR(1)
-)
-""")
-
-def assign_grade(score):
-    if score >= 90:
+def calculate_grade(score_value):
+    """Calculate letter grade based on numeric score."""
+    if score_value >= 90:
         return 'A'
-    elif score >= 80:
+    elif score_value >= 80:
         return 'B'
-    elif score >= 70:
+    elif score_value >= 70:
         return 'C'
-    elif score >= 60:
+    elif score_value >= 60:
         return 'D'
     else:
         return 'F'
 
-def insert_student(name, subject, score):
-    grade = assign_grade(score)
-    
 
-    cursor.execute("SELECT COUNT(*) FROM students WHERE name = %s", (name,))
-    if cursor.fetchone()[0] > 0: # If a student with the same name already exists
-        print(f"Student with name '{name}' already exists. Skipping insertion.")
+def add_student(db_connection, db_cursor, student_name, subject_name, score_value):
+    """Insert a student with duplicate name checking."""
+    letter_grade = calculate_grade(score_value)
+
+    db_cursor.execute(
+        "SELECT COUNT(*) FROM students WHERE name = %s",
+        (student_name,)
+    )
+    if db_cursor.fetchone()[0] > 0:
+        print(f"Student with name '{student_name}' already exists. Skipping insertion.")
         return
-    
-    cursor.execute("INSERT INTO students (name, subject, score, grade) VALUES (%s, %s, %s, %s)", 
-                   (name, subject, score, grade))
-    conn.commit()
-    print(f"Inserted student: {name}, Subject: {subject}, Score: {score}, Grade: {grade}")
 
-students_data = [
-    ("Alice", "Math", 95),
-    ("Bob", "Science", 82),
-    ("Charlie", "History", 76),
-    ("David", "Math", 65),
-    ("Eve", "Science", 55),
-    ("Frank", "History", 45),
-    ("Grace", "Math", 88),
-    ("Heidi", "Science", 92),
-    ("Ivan", "History", 70),
-    ("Judy", "Math", 60),
-    ("Karl", "Science", 50),
-    ("Leo", "History", 40),
-    ("Mallory", "Math", 85),
-    ("Nina", "Science", 78),
-    ("Oscar", "History", 68)
-]
+    db_cursor.execute(
+        "INSERT INTO students (name, subject, score, grade) VALUES (%s, %s, %s, %s)",
+        (student_name, subject_name, score_value, letter_grade)
+    )
+    db_connection.commit()
+    print(
+        f"Inserted student: {student_name}, Subject: {subject_name}, "
+        f"Score: {score_value}, Grade: {letter_grade}"
+    )
 
-for s in students_data:
-    insert_student(*s)
-    
 
-cursor.execute("SELECT id, score FROM students")
-students = cursor.fetchall()
-for student_id, score in students:
-    grade = assign_grade(score)
-    cursor.execute("UPDATE students SET grade = %s WHERE id = %s", (grade, student_id))
-    print(f"Updated student ID {student_id} with grade {grade}")
-conn.commit()
+def run_grades_system():
+    """Main function to run the student grade management system."""
+    with mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD")
+    ) as db_conn:
+        with db_conn.cursor() as db_cursor:
+            db_cursor.execute("CREATE DATABASE IF NOT EXISTS grades_db")
+            db_cursor.execute("USE grades_db")
 
-cursor.execute("ALTER TABLE students ADD COLUMN passed BOOLEAN")
+            db_cursor.execute("DROP TABLE IF EXISTS students")
 
-cursor.execute("UPDATE students SET passed = (score >= 50)") # Set passed to True if score >= 50, else False
-cursor.execute("SELECT name, passed FROM students")
-students = cursor.fetchall()
-for name, passed in students:
-    print(f"Updated student {name} with passed status {passed}")
-conn.commit()
+            db_cursor.execute("""
+            CREATE TABLE IF NOT EXISTS students (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                subject VARCHAR(100) NOT NULL,
+                score INT NOT NULL,
+                grade CHAR(1)
+            )
+            """)
 
-cursor.execute("DELETE FROM students WHERE score < 50")
-conn.commit()
+            student_records = [
+                ("Alice", "Math", 95),
+                ("Bob", "Science", 82),
+                ("Charlie", "History", 76),
+                ("David", "Math", 65),
+                ("Eve", "Science", 55),
+                ("Frank", "History", 45),
+                ("Grace", "Math", 88),
+                ("Heidi", "Science", 92),
+                ("Ivan", "History", 70),
+                ("Judy", "Math", 60),
+                ("Karl", "Science", 50),
+                ("Leo", "History", 40),
+                ("Mallory", "Math", 85),
+                ("Nina", "Science", 78),
+                ("Oscar", "History", 68)
+            ]
 
-cursor.execute("""
-SELECT grade, COUNT(*) as count
-FROM students
-GROUP BY grade
-ORDER BY FIELD(grade, 'A', 'B', 'C', 'D', 'F')
-""")
-grade_counts = cursor.fetchall()
-for grade, count in grade_counts:
-    print(f"Grade: {grade}, Count: {count}")
+            for student_info in student_records:
+                add_student(db_conn, db_cursor, *student_info)
 
-cursor.execute("SELECT * FROM students")
-print("\nFinal Data:")
-for row in cursor.fetchall():
-    print(row)
+            db_cursor.execute("SELECT id, score FROM students")
+            student_list = db_cursor.fetchall()
+            for sid, sc in student_list:
+                grade_val = calculate_grade(sc)
+                db_cursor.execute(
+                    "UPDATE students SET grade = %s WHERE id = %s",
+                    (grade_val, sid)
+                )
+                print(f"Updated student ID {sid} with grade {grade_val}")
+            db_conn.commit()
 
-cursor.close()
-conn.close()
+            db_cursor.execute("ALTER TABLE students ADD COLUMN passed BOOLEAN")
+
+            db_cursor.execute(
+                "UPDATE students SET passed = (score >= 50)"
+            )
+            db_cursor.execute("SELECT name, passed FROM students")
+            student_list = db_cursor.fetchall()
+            for sname, passed_val in student_list:
+                print(f"Updated student {sname} with passed status {passed_val}")
+            db_conn.commit()
+
+            db_cursor.execute("DELETE FROM students WHERE score < 50")
+            db_conn.commit()
+
+            db_cursor.execute("""
+            SELECT grade, COUNT(*) as count
+            FROM students
+            GROUP BY grade
+            ORDER BY FIELD(grade, 'A', 'B', 'C', 'D', 'F')
+            """)
+            grade_distribution = db_cursor.fetchall()
+            for grade_val, cnt in grade_distribution:
+                print(f"Grade: {grade_val}, Count: {cnt}")
+
+            db_cursor.execute("SELECT * FROM students")
+            print("\nFinal Data:")
+            for row in db_cursor.fetchall():
+                print(row)
+
+
+if __name__ == "__main__":
+    run_grades_system()
