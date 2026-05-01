@@ -1,25 +1,27 @@
-# Task 05 · The Full System [Hard — Capstone]
+"""
+Task 05 · The Full System [Hard — Capstone]
 
-# Bring everything together — Weeks 1, 2, and 3 in one script
+Bring everything together — Weeks 1, 2, and 3 in one script
 
-# Goal
-# Build a complete automated data system — fetch, store, analyse, and export. No manual steps.
+Goal
+Build a complete automated data system — fetch, store, analyse, and export. No manual steps.
 
-# Flow:
-# Fetch API → Error handle → Store MySQL → Analyse → Export(csv+text)
+Flow:
+Fetch API → Error handle → Store MySQL → Analyse → Export(csv+text)
 
-# Must:
-# - Fetch data from any public API with error handling
-# - Store ALL fetched data in a properly structured MySQL database
-# - Run at least 3 meaningful SQL queries and print results with labels
-# - Export query results to a CSV file (combine Week 1 + Week 3)
-# - Handle errors at every step — API, database, file
+Must:
+- Fetch data from any public API with error handling
+- Store ALL fetched data in a properly structured MySQL database
+- Run at least 3 meaningful SQL queries and print results with labels
+- Export query results to a CSV file (combine Week 1 + Week 3)
+- Handle errors at every step — API, database, file
 
-# Should:
-# - Write reusable functions: fetch_data(), store_data(), run_report()
+Should:
+- Write reusable functions: fetch_data(), store_data(), run_report()
 
-# Bonus:
-# - Schedule it: run the whole thing every time you run the script fresh
+Bonus:
+- Schedule it: run the whole thing every time you run the script fresh
+"""
 
 import requests
 import mysql.connector
@@ -78,13 +80,13 @@ def process_article(raw_article):
 
     return {
         "id": raw_article.get("id"),
-        "title": raw_article.get("title"),
-        "description": raw_article.get("description"),
-        "content": raw_article.get("content"),
-        "url": raw_article.get("url"),
-        "lang": raw_article.get("lang"),
-        "source_name": raw_article.get("source", {}).get("name"),
-        "source_url": raw_article.get("source", {}).get("url"),
+        "title": raw_article.get("title", "N/A"),
+        "description": raw_article.get("description", "N/A"),
+        "content": raw_article.get("content", "N/A"),
+        "url": raw_article.get("url", "N/A"),
+        "lang": raw_article.get("lang", "N/A"),
+        "source_name": raw_article.get("source", {}).get("name", "N/A"),
+        "source_url": raw_article.get("source", {}).get("url", "N/A"),
         "published_at": published_datetime
     }
 
@@ -177,42 +179,48 @@ def run_news_system():
             print("Done: News fetched and stored successfully.")
 
 
-if __name__ == "__main__":
-    run_news_system()
+def run_analysis():
+    """Run analysis queries on the stored data."""
     try:
         conn = mysql.connector.connect(
-                host=os.getenv("DB_HOST"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD"),
-                database="news_db"
-            )
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database="news_db"
+        )
         cursor = conn.cursor()
-        print("Connected to MySQL database successfully!")
+        print("Connected to MySQL database for analysis!")
     except mysql.connector.Error as err:
         print(f"Error connecting to MySQL: {err}")
-        exit(1)
-
-
+        return
 
     def analysis():
         results = []
 
+        # 1. Total number of articles
+        cursor.execute("SELECT COUNT(*) FROM articles")
+        total = cursor.fetchone()[0]
+        results.append(f"Total articles in database: {total}")
+
+        # 2. Articles per country
         cursor.execute("""
-            SELECT country, COUNT(*) 
-            FROM articles 
+            SELECT country, COUNT(*) as count
+            FROM articles
             GROUP BY country
+            ORDER BY count DESC
         """)
         country_data = cursor.fetchall()
-        results.append("Articles per country:")
+        results.append("\nArticles per country:")
         for row in country_data:
-            results.append(f"{row[0]}: {row[1]}")
+            results.append(f"{row[0]}: {row[1]} articles")
 
-        # 2. Top 5 sources
+        # 3. Top 5 news sources
         cursor.execute("""
-            SELECT source_name, COUNT(*) as total
+            SELECT source_name, COUNT(*) as count
             FROM articles
+            WHERE source_name IS NOT NULL
             GROUP BY source_name
-            ORDER BY total DESC
+            ORDER BY count DESC
             LIMIT 5
         """)
         source_data = cursor.fetchall()
@@ -220,53 +228,41 @@ if __name__ == "__main__":
         for row in source_data:
             results.append(f"{row[0]}: {row[1]} articles")
 
-        # 3. Latest 5 articles
+        # 4. Articles per language
+        cursor.execute("""
+            SELECT lang, COUNT(*) as count
+            FROM articles
+            WHERE lang IS NOT NULL
+            GROUP BY lang
+            ORDER BY count DESC
+        """)
+        lang_data = cursor.fetchall()
+        results.append("\nArticles per language:")
+        for row in lang_data:
+            results.append(f"{row[0]}: {row[1]} articles")
+
+        # 5. Most recent articles
         cursor.execute("""
             SELECT title, country, published_at
             FROM articles
             ORDER BY published_at DESC
             LIMIT 5
         """)
-        latest_data = cursor.fetchall()
-        results.append("\nLatest 5 articles:")
-        for row in latest_data:
-            results.append(f"{row[0]} ({row[1]}) - {row[2]}")
-
-        # 4. Articles per language
-        cursor.execute("""
-            SELECT lang, COUNT(*)
-            FROM articles
-            GROUP BY lang
-        """)
-        lang_data = cursor.fetchall()
-        results.append("\nArticles per language:")
-        for row in lang_data:
-            results.append(f"{row[0]}: {row[1]}")
-
-        # 5. Oldest and newest article
-        cursor.execute("""
-            SELECT MIN(published_at), MAX(published_at)
-            FROM articles
-        """)
-        time_data = cursor.fetchone()
-        results.append("\nTime range:")
-        results.append(f"Oldest: {time_data[0]}")
-        results.append(f"Newest: {time_data[1]}")
+        recent_data = cursor.fetchall()
+        results.append("\n5 most recent articles:")
+        for row in recent_data:
+            results.append(f"- {row[0][:50]}... ({row[1]}) - {row[2]}")
 
         return results
-
 
     # Save to summary.txt
     def save_summary(results):
         with open("summary.txt", "w", encoding="utf-8") as f:
             for line in results:
                 f.write(line + "\n")
-
         print("Summary saved to summary.txt")
 
-
-    # MAIN
-    if __name__ == "__main__":
+    try:
         analysis_results = analysis()
 
         # Print to console
@@ -276,6 +272,16 @@ if __name__ == "__main__":
 
         # Save to file
         save_summary(analysis_results)
-
+    except Exception as e:
+        print(f"Error during analysis: {e}")
+    finally:
         cursor.close()
         conn.close()
+
+
+if __name__ == "__main__":
+    # Run the main news system
+    run_news_system()
+    
+    # Run analysis on the stored data
+    run_analysis()
