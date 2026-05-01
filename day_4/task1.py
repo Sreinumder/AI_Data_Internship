@@ -127,8 +127,7 @@ def run_library_database():
                 print(f"{genre}: {count} books")
 
             db_cursor.execute("""
-                SELECT b.title, r.review_text, r.rating FROM books b
-                JOIN reviews r ON b.id = r.book_id
+                SELECT b.title, r.review_text, r.rating FROM books b, reviews r WHERE b.id = r.book_id
             """)
             query_results = db_cursor.fetchall()
             print("\nBook reviews:")
