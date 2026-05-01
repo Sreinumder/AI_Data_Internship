@@ -36,17 +36,17 @@ load_dotenv()
 NEWS_API_ENDPOINT = "https://gnews.io/api/v4/search/"
 NEWS_API_KEY = os.getenv("GNEWS_API")
 
-TARGET_COUNTRIES = {
+countries = {
     "np": "Nepal",
     "in": "India",
     "us": "USA"
 }
 
 
-def fetch_news_articles():
+def fetch_data():
     """Fetch news articles from GNews API for multiple countries."""
     all_articles = []
-    for country_code in TARGET_COUNTRIES.keys():
+    for country_code in countries.keys():
         time.sleep(2)
         request_params = {
             "q": "news",
@@ -62,7 +62,7 @@ def fetch_news_articles():
             for article in response_data.get("articles", []):
                 all_articles.append((article, country_code))
         except requests.exceptions.RequestException as error:
-            print(f"Error fetching news for {TARGET_COUNTRIES[country_code]}: {error}")
+            print(f"Error fetching news for {countries[country_code]}: {error}")
 
     return all_articles
 
@@ -80,18 +80,18 @@ def process_article(raw_article):
 
     return {
         "id": raw_article.get("id"),
-        "title": raw_article.get("title", "N/A"),
-        "description": raw_article.get("description", "N/A"),
-        "content": raw_article.get("content", "N/A"),
-        "url": raw_article.get("url", "N/A"),
-        "lang": raw_article.get("lang", "N/A"),
-        "source_name": raw_article.get("source", {}).get("name", "N/A"),
-        "source_url": raw_article.get("source", {}).get("url", "N/A"),
+        "title": raw_article.get("title"),
+        "description": raw_article.get("description"),
+        "content": raw_article.get("content"),
+        "url": raw_article.get("url"),
+        "lang": raw_article.get("lang"),
+        "source_name": raw_article.get("source", {}).get("name"),
+        "source_url": raw_article.get("source", {}).get("url"),
         "published_at": published_datetime
     }
 
 
-def store_articles(db_connection, db_cursor, articles):
+def store_data(db_connection, db_cursor, articles):
     """Store processed articles in the database."""
     for raw_article, country_code in articles:
         processed_article = process_article(raw_article)
@@ -169,9 +169,9 @@ def run_news_system():
 
             print("Connected to MySQL database successfully!")
 
-            fetched_articles = fetch_news_articles()
+            fetched_articles = fetch_data()
             if fetched_articles:
-                store_articles(db_conn, db_cursor, fetched_articles)
+                store_data(db_conn, db_cursor, fetched_articles)
                 export_data_to_csv(db_conn)
             else:
                 print("No articles were fetched. Skipping storage and export.")
