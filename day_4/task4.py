@@ -1,20 +1,18 @@
-"""
-Task 04 · Update, Delete & Data Integrity [Hard]
+# Task 04 · Update, Delete & Data Integrity [Hard]
 
-Databases aren't just for storing — managing and maintaining data is equally important
+# Databases aren't just for storing — managing and maintaining data is equally important
 
-Goal
-Build a student grade management system — insert, update, delete, and validate data.
+# Goal
+# Build a student grade management system — insert, update, delete, and validate data.
 
-Create grades.db with a students table: id, name, subject, score, grade TEXT
-Insert 15 students with various scores (mix them between 40-100)
-Write a function assign_grade(score) that returns A/B/C/D/F based on score
-UPDATE all rows — set the grade column using your function
-DELETE all students who scored below 50 — they didn't pass
-Add a new column passed BOOLEAN using ALTER TABLE — set it based on score >= 50
-Query: show count of students per grade, ordered from A to F
-Handle the case where a student name is entered twice — check before inserting
-"""
+# Create grades.db with a students table: id, name, subject, score, grade TEXT
+# Insert 15 students with various scores (mix them between 40-100)
+# Write a function assign_grade(score) that returns A/B/C/D/F based on score
+# UPDATE all rows — set the grade column using your function
+# DELETE all students who scored below 50 — they didn't pass
+# Add a new column passed BOOLEAN using ALTER TABLE — set it based on score >= 50
+# Query: show count of students per grade, ordered from A to F
+# Handle the case where a student name is entered twice — check before inserting
 
 import os
 import mysql.connector

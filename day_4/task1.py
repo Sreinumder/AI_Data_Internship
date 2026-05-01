@@ -1,24 +1,23 @@
-"""
-Task 01 · Create, Insert & Query [Medium]
-Independent task — build your first MySQL database from scratch
-Goal:
-Create a MySQL database, populate it with data, and run queries to answer questions about it.
-1. Create a database called library.db with a table books
-   (id, title, author, year, genre, rating REAL)
-2. Insert at least 8 books — use a mix of genres, years, and ratings
-3. Query 1:
-   SELECT all books published after 2000, ordered by rating (highest first)
-4. Query 2:
-   SELECT all books in the 'Fiction' genre with rating above 4.0
-5. Query 3:
-   Find the average rating across all books
-6. Query 4:
-   Count how many books exist per genre — use GROUP BY genre
-7. Print all query results neatly with labels — not just raw tuples
+# Task 01 · Create, Insert & Query [Medium]
+# Independent task — build your first MySQL database from scratch
+# Goal:
+# Create a MySQL database, populate it with data, and run queries to answer questions about it.
+# 1. Create a database called library.db with a table books
+#    (id, title, author, year, genre, rating REAL)
+# 2. Insert at least 8 books — use a mix of genres, years, and ratings
+# 3. Query 1:
+#    SELECT all books published after 2000, ordered by rating (highest first)
+# 4. Query 2:
+#    SELECT all books in the 'Fiction' genre with rating above 4.0
+# 5. Query 3:
+#    Find the average rating across all books
+# 6. Query 4:
+#    Count how many books exist per genre — use GROUP BY genre
+# 7. Print all query results neatly with labels — not just raw tuples
 
-Bonus : Add a reviews table and link it to books via book_id foreign key
-Deliverable: library.db + script showing all 4 query outputs
-"""
+# Bonus : Add a reviews table and link it to books via book_id foreign key
+# Deliverable: library.db + script showing all 4 query outputs
+
 import os
 from dotenv import load_dotenv
 import mysql.connector

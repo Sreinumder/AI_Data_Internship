@@ -1,18 +1,17 @@
-"""
-Task 03 · Weather Data + Analysis [Hard]
-Store real weather data in MySQL and run meaningful analysis queries
-Goal
-Use the Open-Meteo API to fetch 7-day weather for 3 cities and store + compare them in MySQL
-1. Fetch 7-day forecast (max + min temp) for 3 cities of your choice using Open-Meteo API
-2. Create weather.db with a forecasts table: id, city, date, max_temp, min_temp
-3. Insert all 21 rows (3 cities * 7 days) into the database
-4. Query 1: Which city has the highest average max temperature?
-5. Query 2: Find the single hottest day across all 3 cities
-6. Query 3: Find days where the temperature difference (max - min) is greater than 10°C
-7. Save a summary report to a summary.txt file using Python file handling (Week 1 skill!)
-Deliverable: weather.db + summary.txt + script showing all 3 query outputs
-Bonus: add humidity data as a 4th column
-"""
+# Task 03 · Weather Data + Analysis [Hard]
+# Store real weather data in MySQL and run meaningful analysis queries
+# Goal
+# Use the Open-Meteo API to fetch 7-day weather for 3 cities and store + compare them in MySQL
+# 1. Fetch 7-day forecast (max + min temp) for 3 cities of your choice using Open-Meteo API
+# 2. Create weather.db with a forecasts table: id, city, date, max_temp, min_temp
+# 3. Insert all 21 rows (3 cities * 7 days) into the database
+# 4. Query 1: Which city has the highest average max temperature?
+# 5. Query 2: Find the single hottest day across all 3 cities
+# 6. Query 3: Find days where the temperature difference (max - min) is greater than 10°C
+# 7. Save a summary report to a summary.txt file using Python file handling (Week 1 skill!)
+# Deliverable: weather.db + summary.txt + script showing all 3 query outputs
+# Bonus: add humidity data as a 4th column
+
 import os
 import requests
 from dotenv import load_dotenv
