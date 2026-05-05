@@ -3,6 +3,7 @@ from functools import reduce
 import os
 import csv
 import json
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -16,6 +17,7 @@ import dotenv
 
 dotenv.load_dotenv()
 API_KEY = os.getenv("GNEWS_API")
+BASE_DIR = Path(__file__).resolve().parent
 
 url = "https://gnews.io/api/v4/search"
 params = {
@@ -60,18 +62,18 @@ for page in range(1, 100+1):
         print(e)
         break
     
-filename = "articles.csv"
+filename = BASE_DIR / "articles.csv"
 
 # write the output of the request onto the csv and 
 # we can ensure that the new news wasnt already present by matching id of new news and older ones
-if not os.path.exists(filename):
-    with open(filename,"w", newline="") as f:
+if not filename.exists():
+    with filename.open("w", newline="") as f:
         csvWriter = csv.DictWriter(f, fieldnames=news_csv_header)
         csvWriter.writeheader()
 
 # read entire row of csv with all the ids
 present_id = []
-with open(filename, "r") as f:
+with filename.open("r") as f:
     csvReader = csv.DictReader(f)
     for row in csvReader:
         present_id.append(row["id"])
@@ -79,7 +81,7 @@ print(f"{present_id} those were already present.")
 
 duplicate_found = []
 total_article = 0
-with open(filename, "a", newline="") as f:
+with filename.open("a", newline="") as f:
     csvWriter = csv.DictWriter(f, fieldnames=news_csv_header)
     for article_page in article_pages:
         total_article += len(article_page)

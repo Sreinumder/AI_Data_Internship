@@ -9,10 +9,14 @@ from operator import indexOf
 
 import json
 import csv
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
 request_url="https://api.open-meteo.com/v1/forecast"
+BASE_DIR = Path(__file__).resolve().parent
+weather_csv = BASE_DIR / "weather.csv"
+summary_file = BASE_DIR / "temperature_summary.txt"
 
 params = {
     "latitude": "27.6748", # bhaktapur's lat lng
@@ -42,13 +46,13 @@ try:
     # print(temperatures, type(temperatures))
     print(minimum_temp, min_temp_dates)
 
-    with open("weather.csv", mode="w", newline="") as file:
+    with weather_csv.open(mode="w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["time", "temperature_2m_max"])
         writer.writeheader()
         for day, temp in zip(days, temperatures):
             writer.writerow({"time": day, "temperature_2m_max": temp})
     
-    with open("temperature_summary.txt", "w", newline="") as file:
+    with summary_file.open("w", newline="") as file:
         file.write(f"location: {weather_data["latitude"]}, {weather_data["longitude"]}\r")
         file.write(f"\rThe maximum temperature of {maximum_temp} degree celcius is predicted to be reached \rwithin next 7 days on ")
         file.write(f" {max_temp_dates}\r")

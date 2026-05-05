@@ -1,5 +1,9 @@
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
 try:
-    with open("tasks.txt",  mode="r") as f:
+    with (BASE_DIR / "tasks.txt").open(mode="r") as f:
         file_string = f.read()
         words = file_string.split()
         print(words)

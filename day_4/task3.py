@@ -14,6 +14,7 @@
 
 import os
 import json
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from dotenv import load_dotenv
@@ -21,6 +22,8 @@ import mysql.connector
 from collections import defaultdict
 
 load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+SUMMARY_PATH = BASE_DIR / "summary.txt"
 
 
 def run_weather_analysis():
@@ -138,7 +141,7 @@ def run_weather_analysis():
             """)
             high_variance_days = db_cursor.fetchall()
 
-            with open("summary.txt", "w", encoding="utf-8") as report_file:
+            with SUMMARY_PATH.open("w", encoding="utf-8") as report_file:
                 report_file.write("Weather Summary Report\n")
                 report_file.write("=====================\n\n")
 
@@ -163,7 +166,7 @@ def run_weather_analysis():
                         f"Humidity {hum:.2f}% | Diff {temp_diff:.2f}°C\n"
                     )
 
-            print("summary.txt created successfully!")
+            print(f"{SUMMARY_PATH} created successfully!")
 
 
 if __name__ == "__main__":

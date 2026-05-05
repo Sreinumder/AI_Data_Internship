@@ -1,9 +1,13 @@
 import csv
 import json
+from pathlib import Path
 from urllib.request import urlopen
 
 request_url="https://jsonplaceholder.typicode.com"
 endpoint="/posts"
+BASE_DIR = Path(__file__).resolve().parent
+posts_csv = BASE_DIR / "posts.csv"
+filtered_posts_csv = BASE_DIR / "postsWithMoreThan5Words.csv"
 
 try:
     with urlopen(request_url+endpoint, timeout=10) as res:
@@ -16,13 +20,13 @@ except:
     print("failed to make the request")
     exit
 
-with open("posts.csv", "w", newline="") as file:
+with posts_csv.open("w", newline="") as file:
     header = ["id", "title", "body"]
     writer = csv.DictWriter(file, fieldnames=header, extrasaction='ignore')
     writer.writeheader()
     writer.writerows(posts_data)
     
-with open("posts.csv", "r", newline="") as file:
+with posts_csv.open("r", newline="") as file:
     reader = csv.DictReader(file)
     # for row in reader:
     #     print(row)
@@ -30,7 +34,7 @@ with open("posts.csv", "r", newline="") as file:
     # print(MoreThanFive.__sizeof__(), reader.__sizeof__())
     # for row in MoreThanFive:
     #     print(row)
-    with open("postsWithMoreThan5Words.csv", "w", newline="") as fileWrite:
+    with filtered_posts_csv.open("w", newline="") as fileWrite:
         header = ["id", "title", "body"]
         writer = csv.DictWriter(fileWrite, fieldnames=header)
         writer.writeheader()

@@ -26,12 +26,16 @@ import pandas as pd
 import os
 import time
 import json
+from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from dotenv import load_dotenv
 from datetime import datetime
 
 load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+NEWS_CSV_PATH = BASE_DIR / "news_data.csv"
+SUMMARY_PATH = BASE_DIR / "summary.txt"
 
 NEWS_API_ENDPOINT = "https://gnews.io/api/v4/search/"
 NEWS_API_KEY = os.getenv("GNEWS_API")
@@ -134,8 +138,8 @@ def export_data_to_csv(db_connection):
     try:
         dataframe = pd.read_sql("SELECT * FROM articles", db_connection)
         dataframe.drop_duplicates(subset=["id"], inplace=True)
-        dataframe.to_csv("news_data.csv", index=False)
-        print("Data exported to news_data.csv successfully!")
+        dataframe.to_csv(NEWS_CSV_PATH, index=False)
+        print(f"Data exported to {NEWS_CSV_PATH} successfully!")
     except Exception as error:
         print(f"Error exporting data to CSV: {error}")
 
@@ -257,10 +261,10 @@ def analysis():
 
     # Save to summary.txt
     def save_summary(results):
-        with open("summary.txt", "w", encoding="utf-8") as f:
+        with SUMMARY_PATH.open("w", encoding="utf-8") as f:
             for line in results:
                 f.write(line + "\n")
-        print("Summary saved to summary.txt")
+        print(f"Summary saved to {SUMMARY_PATH}")
 
     try:
         analysis_results = analysis()

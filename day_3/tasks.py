@@ -1,9 +1,11 @@
 import csv
 from datetime import datetime, timedelta
+from pathlib import Path
 import pycountry
 
-filename="articles.csv"
-with open(filename, "r") as f:
+BASE_DIR = Path(__file__).resolve().parent
+filename = BASE_DIR / "articles.csv"
+with filename.open("r") as f:
     articles = csv.DictReader(f)
     rows = list(articles)
 
@@ -124,9 +126,9 @@ with open(filename, "r") as f:
         "source_url",
         "source_country"
     ]
-    gt6_filename="more_than_6_words.csv"
+    gt6_filename = BASE_DIR / "more_than_6_words.csv"
     headlines_gt_6 = 0
-    with open(gt6_filename, mode="w", newline="") as ff:
+    with gt6_filename.open(mode="w", newline="") as ff:
         writer = csv.DictWriter(ff, fieldnames=news_csv_header)
         writer.writeheader()
         for row in rows:
