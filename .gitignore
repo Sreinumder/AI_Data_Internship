@@ -3,3 +3,6 @@ venv/
 *.csv
 output.json
 *.pdf
+__pycache__/
+*.pyc
+*.pyo
