@@ -1,32 +1,17 @@
-Articles published per day:
-2026-04-30: 21 articles
+Weather Summary Report
+=====================
 
-Source reliability analysis (minimum 2 articles):
-Live Hindustan: 4 articles, 100.00% data completeness
-Times of India: 3 articles, 100.00% data completeness
-Heavy.: 2 articles, 100.00% data completeness
+Hottest city on average: Tokyo with avg max temp 23.15°C
 
-Country-wise source diversity:
-us: 9 unique sources, 10 total articles
-in: 5 unique sources, 10 total articles
-np: 1 unique sources, 1 total articles
+Hottest day: New York on 2026-05-05 with 29.10°C
 
-Data quality analysis:
-Total articles: 21
-Missing title: 0 (0.0%)
-Missing description: 0 (0.0%)
-Missing content: 0 (0.0%)
-Missing URL: 0 (0.0%)
-Missing source: 0 (0.0%)
-
-Top 10 source domains:
-www.livehindustan.com: 4 articles
-timesofindia.indiatimes.com: 3 articles
-heavy.com: 2 articles
-www.scientificamerican.com: 1 articles
-www.mk.ru: 1 articles
-triblive.com: 1 articles
-www.hindustantimes.com: 1 articles
-www.nj.com: 1 articles
-www.usnews.com: 1 articles
-www.deseret.com: 1 articles
+Days with temperature difference > 10°C:
+New York on 2026-05-01: Max 16.70°C, Min 5.10°C, Humidity 61.58% | Diff 11.60°C
+New York on 2026-05-05: Max 29.10°C, Min 12.60°C, Humidity 49.42% | Diff 16.50°C
+London on 2026-05-01: Max 24.30°C, Min 12.50°C, Humidity 44.38% | Diff 11.80°C
+London on 2026-05-02: Max 22.60°C, Min 11.80°C, Humidity 57.17% | Diff 10.80°C
+Tokyo on 2026-05-01: Max 20.00°C, Min 9.50°C, Humidity 86.00% | Diff 10.50°C
+Tokyo on 2026-05-02: Max 27.10°C, Min 12.50°C, Humidity 52.75% | Diff 14.60°C
+Tokyo on 2026-05-03: Max 23.90°C, Min 12.50°C, Humidity 65.25% | Diff 11.40°C
+Tokyo on 2026-05-05: Max 21.70°C, Min 11.20°C, Humidity 48.25% | Diff 10.50°C
+Tokyo on 2026-05-10: Max 22.50°C, Min 12.30°C, Humidity 56.50% | Diff 10.20°C

@@ -1,15 +1,15 @@
 from traceback import print_exception
-
-import requests
+import json
+from urllib.request import urlopen
 
 
 request_url="https://jsonplaceholder.typicode.com"
 endpoint="/users"
 try:
-    res = requests.get(request_url+endpoint)
-    if (res.status_code == 200):
-        print("successfully fetched data!")
-    users_data = res.json()
+    with urlopen(request_url+endpoint, timeout=10) as res:
+        if (res.status == 200):
+            print("successfully fetched data!")
+        users_data = json.loads(res.read().decode("utf-8"))
     # print(type(users_data))
     # print(type(users_data[0]))
     # print(users_data[0])

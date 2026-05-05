@@ -7,9 +7,10 @@
 
 from operator import indexOf
 
-import requests
 import json
 import csv
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 request_url="https://api.open-meteo.com/v1/forecast"
 
@@ -20,12 +21,13 @@ params = {
 }
 
 try:
-    res = requests.get(request_url, params=params)
-    if res.status_code == 200:
+    full_url = request_url + "?" + urlencode(params)
+    with urlopen(full_url, timeout=10) as res:
+        weather_data = json.loads(res.read().decode("utf-8"))
+    if res.status == 200:
         print("successfully fetched the data")
-        print(json.dumps( res.json(), indent=2))
+        print(json.dumps(weather_data, indent=2))
     
-    weather_data = res.json()
     days = weather_data["daily"]["time"]
     temperatures = weather_data["daily"]["temperature_2m_max"]
     maximum_temp = max(temperatures)

@@ -13,7 +13,9 @@
 # Bonus: add humidity data as a 4th column
 
 import os
-import requests
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
 from dotenv import load_dotenv
 import mysql.connector
 from collections import defaultdict
@@ -60,13 +62,15 @@ def run_weather_analysis():
                 api_params["latitude"] = coords["latitude"]
                 api_params["longitude"] = coords["longitude"]
 
-                api_response = requests.get(
-                    "https://api.open-meteo.com/v1/forecast",
-                    params=api_params
-                )
+                try:
+                    full_url = "https://api.open-meteo.com/v1/forecast?" + urlencode(api_params)
+                    with urlopen(full_url, timeout=10) as api_response:
+                        weather_data = json.loads(api_response.read().decode("utf-8"))
+                except Exception as error:
+                    print(f"Failed to fetch data for {city_name}: {error}")
+                    weather_data = None
 
-                if api_response.status_code == 200:
-                    weather_data = api_response.json()
+                if weather_data:
 
                     daily_data = weather_data.get("daily", {})
                     hourly_data = weather_data.get("hourly", {})
@@ -109,8 +113,6 @@ def run_weather_analysis():
 
                     db_conn.commit()
                     print(f"{city_name} data inserted successfully!")
-                else:
-                    print(f"Failed to fetch data for {city_name}: {api_response.status_code}")
 
             db_cursor.execute("""
             SELECT city, AVG(max_temp) as avg_max

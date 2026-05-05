@@ -11,12 +11,13 @@
 # Deliverable: MySQL monitor_db with both tables populated + Python script
 
 import os
+import json
 from datetime import datetime
 from pathlib import Path
+from urllib.request import urlopen
 from uuid import uuid4
 
 import mysql.connector
-import requests
 from dotenv import load_dotenv
 
 
@@ -142,9 +143,8 @@ def ensure_table_columns(cursor):
 
 def fetch_api():
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        posts = response.json()
+        with urlopen(url, timeout=10) as response:
+            posts = json.loads(response.read().decode("utf-8"))
         print(f"[API] Fetched {len(posts)} posts")
         return posts
     except Exception as e:

@@ -24,7 +24,8 @@
 # JOIN users and posts and print each user's posts
 
 import os
-import requests
+import json
+from urllib.request import urlopen
 from dotenv import load_dotenv
 import mysql.connector
 
@@ -62,9 +63,14 @@ def run_app_pipeline():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )""")
 
-            api_response = requests.get("https://jsonplaceholder.typicode.com/users")
-            if api_response.status_code == 200:
-                user_data = api_response.json()
+            try:
+                with urlopen("https://jsonplaceholder.typicode.com/users", timeout=10) as api_response:
+                    user_data = json.loads(api_response.read().decode("utf-8"))
+            except Exception as error:
+                print("User API fetch error:", error)
+                user_data = []
+
+            if user_data:
                 for user in user_data:
                     try:
                         db_cursor.execute("""
@@ -89,9 +95,14 @@ def run_app_pipeline():
 
             db_conn.commit()
 
-            posts_response = requests.get("https://jsonplaceholder.typicode.com/posts")
-            if posts_response.status_code == 200:
-                posts_data = posts_response.json()
+            try:
+                with urlopen("https://jsonplaceholder.typicode.com/posts", timeout=10) as posts_response:
+                    posts_data = json.loads(posts_response.read().decode("utf-8"))
+            except Exception as error:
+                print("Post API fetch error:", error)
+                posts_data = []
+
+            if posts_data:
                 for post in posts_data:
                     if post["userId"] in [1, 2, 3]:
                         try:

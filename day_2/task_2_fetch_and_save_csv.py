@@ -1,12 +1,13 @@
-import requests
 import csv
+import json
+from urllib.request import urlopen
 
 request_url="https://jsonplaceholder.typicode.com"
 endpoint="/posts"
 
 try:
-    res = requests.get(request_url+endpoint)
-    posts_data = res.json()
+    with urlopen(request_url+endpoint, timeout=10) as res:
+        posts_data = json.loads(res.read().decode("utf-8"))
     # print(type(posts_data))
     # print(posts_data)
     # print(posts_data[0])

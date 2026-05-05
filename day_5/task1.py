@@ -17,9 +17,11 @@ import mysql.connector
 from dotenv import load_dotenv
 
 
-load_dotenv()
-
+BASE_DIR = Path(__file__).resolve().parent
 REPORT_PATH = Path(__file__).with_name("revenue_report.csv")
+
+load_dotenv(BASE_DIR.parent / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 def get_db_config():

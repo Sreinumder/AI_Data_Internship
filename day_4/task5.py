@@ -21,11 +21,13 @@
 # Bonus:
 # - Schedule it: run the whole thing every time you run the script fresh
 
-import requests
 import mysql.connector
 import pandas as pd
 import os
 import time
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -53,13 +55,13 @@ def fetch_data():
             "max": 10
         }
         try:
-            api_response = requests.get(NEWS_API_ENDPOINT, params=request_params)
-            api_response.raise_for_status()
-            response_data = api_response.json()
+            full_url = NEWS_API_ENDPOINT + "?" + urlencode(request_params)
+            with urlopen(full_url, timeout=10) as api_response:
+                response_data = json.loads(api_response.read().decode("utf-8"))
 
             for article in response_data.get("articles", []):
                 all_articles.append((article, country_code))
-        except requests.exceptions.RequestException as error:
+        except Exception as error:
             print(f"Error fetching news for {countries[country_code]}: {error}")
 
     return all_articles

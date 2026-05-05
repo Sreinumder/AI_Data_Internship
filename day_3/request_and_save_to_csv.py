@@ -2,8 +2,10 @@ from dataclasses import field
 from functools import reduce
 import os
 import csv
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
-import requests
 import dotenv
 
 # api documentations at https://docs.gnews.io/ api request limit: 100
@@ -44,15 +46,16 @@ for page in range(1, 100+1):
     params["page"] = page
     # print(params["page"])
     try:
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
-            data = response.json()
+        full_url = url + "?" + urlencode(params)
+        with urlopen(full_url, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        if response.status == 200:
             print("request for", page,  "was successful with output of", len(data["articles"]))
             # print(data)
             article_pages.append(data["articles"])
         else:
-            print("there was failure on api request. The status code is ", response.status_code)
-            print(response.json())
+            print("there was failure on api request. The status code is ", response.status)
+            print(data)
     except Exception as e:
         print(e)
         break
