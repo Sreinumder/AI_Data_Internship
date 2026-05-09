@@ -1,4 +1,3 @@
-from traceback import print_exception
 import json
 from urllib.request import urlopen
 
@@ -18,6 +17,6 @@ try:
         print(f"name:{u["name"]}")
         print(f"email:{u["email"]}")
         print(f"city:{u["address"]["city"]}\n")
-except:
-    print_exception("failed to make an request")
+except Exception as e:
+    print(e)
     
