@@ -6,3 +6,6 @@ output.json
 __pycache__/
 *.pyc
 *.pyo
+*.db
+*.pptx
+*.ppt
