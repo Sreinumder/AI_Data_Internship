@@ -66,9 +66,9 @@ df["score"] = pd.to_numeric(df["score"], errors="coerce")
 df = df.dropna(subset=["name", "score"])
 
 # Remove invalid scores
-# Keep only scores >= 0
+# Keep only scores >= 0 and score <= 100
 # -------------------------
-df = df[df["score"] >= 0]
+df = df[(df["score"] >= 0) & (df["score"] <= 100)]
 
 # Remove duplicates
 df = df.drop_duplicates()
