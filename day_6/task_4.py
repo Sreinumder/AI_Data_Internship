@@ -12,41 +12,79 @@
 
 import pandas as pd
 
-# 1 load csv
+# 1. LOAD CSV
 df = pd.read_csv("clean_students.csv")
 
+# Identify the score columns dynamically
+score_cols = ["math_score", "english_score", "science_score", "social_study_score"]
+
+# First, let's create a core 'overall_score' to handle your global ranking and categorization
+df["overall_score"] = df[score_cols].mean(axis=1).round(2)
+
+
+# 2. ADD GRADE COLUMN (Using your updated tier logic: A>=90, B>=75, C>=60, D>=50, F<50)
 def assign_grade(score):
     if score >= 90:
         return "A"
     elif score >= 75:
         return "B"
-    elif score >= 50:
+    elif score >= 60:
         return "C"
-    elif score >= 40:
+    elif score >= 50:
         return "D"
     else:
         return "F"
 
-# 2 apply function on dataframe to create column
-# this is already done in first task tho
-# df["grade"] = df["score"].apply(assign_grade)
 
-# 3 apply passed or failed boolean column
-df["passed"] = df["score"] >= 50
+# Generate grades for each subject AND the overall score
+for col in score_cols:
+    grade_col = col.replace("_score", "_grade")
+    df[grade_col] = df[col].apply(assign_grade)
 
-# 4 score_category column based on values range
-df["score_category"] = pd.cut(df["score"], bins=[0, 49, 79, 100], labels=["Low", "Medium", "High"])
+df["overall_grade"] = df["overall_score"].apply(assign_grade)
 
-# 5 rank column based on order of score
-df["rank"] = df["score"].rank(ascending=False)
 
-# 6 group by grade and calcaulate stats
-print(df.groupby("grade").agg({"score": ["count", "mean", "min", "max"]}))
+# 3. ADD PASSED COLUMN (True if overall score >= 50)
+df["passed"] = df["overall_score"] >= 50
 
-# 7 sort by rank and reset the index to be in order of rank
-df = df.sort_values("rank", ascending=False).reset_index(drop=True)
 
-# 8 save it to enriched csv
+# 4. ADD SCORE_CATEGORY COLUMN ('High' >= 80, 'Medium' 50-79, 'Low' < 50)
+# Note: right=True is default, so we shift our boundaries slightly or use include_lowest
+df["score_category"] = pd.cut(
+    df["overall_score"],
+    bins=[-1, 49.99, 79.99, 100],
+    labels=["Low", "Medium", "High"],
+)
+
+
+# 5. ADD RANK COLUMN (Highest overall score gets rank 1)
+# 'min' method ensures that ties share the upper rank (e.g., two people tied for 1st both get 1.0)
+df["rank"] = df["overall_score"].rank(ascending=False, method="min").astype(int)
+
+
+# 6. GROUP BY GRADE AND CALCULATE STATS
+# Grouping by the new 'overall_grade' to check class distribution and performance bounds
+print("=" * 60)
+# Format the headers nicely using a joined multi-index display
+grouped_stats = df.groupby("overall_grade").agg(
+    {"overall_score": ["count", "mean", "min", "max"]}
+)
+print("GROUPBY STATS (BY OVERALL GRADE):")
+print(grouped_stats)
+print("=" * 60 + "\n")
+
+
+# 7. SORT BY RANK AND RESET INDEX
+# To have the top students at the top of the file, we sort ascending=True for rank (1, 2, 3...)
+df = df.sort_values("rank", ascending=True).reset_index(drop=True)
+
+
+# 8. SAVE ENRICHED DATA AND PRINT TOP 5
 df.to_csv("enriched_students.csv", index=False)
 
-print(df.head())
+# Selecting a clean preview subset of columns so it prints readable text in your console
+preview_cols = ["rank", "name", "overall_score", "overall_grade", "passed", "score_category"]
+print("TOP 5 RANKED STUDENTS:")
+print(df[preview_cols].head(5))
+
+print("\nenriched_students.csv saved successfully!")

@@ -9,46 +9,54 @@
 # 4 Add a grade column: A ( 90), B ( 75), C ( 50), F (<50) — use df['score'].apply()
 # 5 Save the cleaned result to clean_students.csv and print a before/after row count
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-# 1. CREATE A MESSY CSV MANUALLY
+# 1. CREATE A MESSY CSV MANUALLY (Expanded with 4 subject columns)
+# Problems injected: Whitespace, case inconsistency, missing values (None/NaN),
+# string-formatted numbers, invalid negative/extreme scores, and duplicate rows.
 
 messy_data = [
-    [" alice ", "85"],        # preceeding Whitespace
-    ["BOB", "92"],            # uppercase name
-    ["charlie", "48"],
-    ["DAVID", "-5"],          # invalid score
-    ["Emma", None],           # missing score
-    [None, "77"],             # missing name
-    ["frank", "65"],
-    [" Grace ", "88"],
-    ["alice", "85"],          # duplicate-like row
-    ["BOB", "92"],            # exact duplicate
-    ["Henry", "105"],         # unrealistic but valid unless filtered
-    [" isabella ", "73"],
-    ["JACK", "44"],
-    ["kate", "-10"],          # invalid score
-    ["Leo", "91"],
-    ["mia", "58"],
-    ["NORA ", "81"],
+    # name, math, english, science, social_studies
+    [" alice ", "85", "90", "88", "92"],  # Whitespace, strings
+    ["BOB", "92", "78", "85", "80"],  # Uppercase name
+    ["charlie", "48", "55", "50", "60"],
+    ["DAVID", "-5", "75", "82", "70"],  # Invalid negative math score
+    ["Emma", "95", None, "89", "91"],  # Missing English score
+    [None, "77", "81", "84", "79"],  # Missing Name
+    ["frank", "65", "70", "120", "68"],  # Invalid >100 science score
+    [" Grace ", "88", "92", "85", "90"],  # Whitespace
+    ["alice", "85", "90", "88", "92"],  # Duplicate-like row (after stripping)
+    ["BOB", "92", "78", "85", "80"],  # Exact duplicate
+    ["Henry", "90", "85", "88", "95"],
+    [" isabella ", "73", "80", "78", "82"],
+    ["JACK", "44", "52", "49", "51"],
+    ["kate", "85", "-10", "90", "88"],  # Invalid negative English score
+    ["Leo", "91", "88", "93", "87"],
+    ["mia", "58", "62", "60", "64"],
+    ["NORA ", "81", "85", "88", "83"],  # Trailing whitespace
 ]
 
-messy_df = pd.DataFrame(messy_data, columns=["name", "score"])
+columns = ["name", "math_score", "english_score", "science_score", "social_study_score"]
+score_cols = ["math_score", "english_score", "science_score", "social_study_score"]
 
+messy_df = pd.DataFrame(messy_data, columns=columns)
 messy_df.to_csv("messy_students.csv", index=False)
-
-print("messy_students.csv created!\n")
+print("messy_students.csv created successfully!\n")
 
 
 # 2. LOAD CSV + SHOW PROBLEMS
-
 df = pd.read_csv("messy_students.csv")
 
+print("--- ORIGINAL MESSY DATA ---")
 print(df)
+print("\n--- DATAFRAME INFO ---")
 print(df.info())
+print("\n--- MISSING VALUES PER COLUMN ---")
 print(df.isnull().sum())
+
 before_rows = len(df)
+
 
 # 3. FIX ALL 6 PROBLEMS
 
@@ -58,24 +66,25 @@ df["name"] = df["name"].astype(str).str.strip()
 # Fix inconsistent casing
 df["name"] = df["name"].str.title()
 
-# Convert score to numeric
-df["score"] = pd.to_numeric(df["score"], errors="coerce")
+# Convert all score columns to numeric (handles string digits and forces errors to NaN)
+for col in score_cols:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
 
-# Handle missing values
-# Remove rows with missing name or score
-df = df.dropna(subset=["name", "score"])
+# Handle missing values: Drop rows where name or ANY score is missing
+df = df.dropna(subset=["name"] + score_cols)
 
-# Remove invalid scores
-# Keep only scores >= 0 and score <= 100
-# -------------------------
-df = df[(df["score"] >= 0) & (df["score"] <= 100)]
+# Remove invalid scores: Keep rows where ALL scores are between 0 and 100
+valid_scores_condition = True
+for col in score_cols:
+    valid_scores_condition &= (df[col] >= 0) & (df[col] <= 100)
+
+df = df[valid_scores_condition]
 
 # Remove duplicates
 df = df.drop_duplicates()
 
 
-# 4. ADD GRADE COLUMN
-
+# 4. ADD GRADE COLUMNS
 def assign_grade(score):
     if score >= 90:
         return "A"
@@ -86,7 +95,11 @@ def assign_grade(score):
     else:
         return "F"
 
-df["grade"] = df["score"].apply(assign_grade)
+
+# Automatically generate grade columns for every subject
+for col in score_cols:
+    grade_col_name = col.replace("_score", "_grade")
+    df[grade_col_name] = df[col].apply(assign_grade)
 
 
 # AFTER CLEANING ROW COUNT
@@ -95,11 +108,14 @@ after_rows = len(df)
 # 5. SAVE CLEANED CSV
 df.to_csv("clean_students.csv", index=False)
 
-print("\nCLEANED DATA")
+print("\n" + "=" * 50)
+print("CLEANED DATA")
+print("=" * 50)
 print(df)
 
-print("\nROW COUNT")
+print("\n--- ROW COUNT SUMMARY ---")
 print(f"Before cleaning: {before_rows}")
 print(f"After cleaning : {after_rows}")
+print(f"Dropped rows   : {before_rows - after_rows}")
 
 print("\nclean_students.csv saved successfully!")
