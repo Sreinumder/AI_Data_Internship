@@ -67,7 +67,7 @@ messy_data = [
     ["Ursula", "81", "95", "88", "83"],
     ["Valerie", "59", "91", "58", "40"],
     ["Wyatt", "92", "94", "91", "95"],
-    ["Zane", "45", "90", "48", "52"],
+    ["Zane", "0", "0", "0", "0"],
 ]
 
 columns = ["name", "math_score", "english_score", "science_score", "social_study_score"]
